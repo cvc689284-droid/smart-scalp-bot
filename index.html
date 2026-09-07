@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Scalp Bot v4.0 Pro</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <!-- Telegram Web App API -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.75; transform: scale(1.01); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 3s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex items-center justify-center min-h-screen p-0 sm:p-4">
+
+    <div class="w-full max-w-md bg-slate-950 sm:bg-slate-900 sm:rounded-3xl p-4 border-0 sm:border border-slate-800 shadow-2xl min-h-screen sm:min-h-[auto] flex flex-col justify-between relative overflow-hidden">
+        
+        <div>
+            <!-- شريط معلومات تيليجرام -->
+            <div id="tg-user-banner" class="hidden mb-3 bg-cyan-500/10 border border-cyan-500/30 p-2.5 rounded-2xl flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-base">👤</span>
+                    <div>
+                        <div class="text-[9px] text-slate-400">مرحباً بك في تيليجرام</div>
+                        <div id="tg-username" class="text-xs font-bold text-cyan-300">مستخدم تيليجرام</div>
+                    </div>
+                </div>
+                <span class="text-[9px] bg-cyan-500 text-slate-950 font-bold px-2 py-0.5 rounded-full">VIP Mini App</span>
+            </div>
+
+            <!-- صفحة تسجيل الدخول والترخيص -->
+            <div id="auth-view" class="space-y-5 pt-4">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl mx-auto flex items-center justify-center text-2xl mb-3 shadow-lg shadow-cyan-500/30">🤖</div>
+                    <h1 class="text-xl font-bold">الذكاء الاصطناعي للتداول</h1>
+                    <p class="text-xs text-cyan-400 mt-1">Smart Scalp Bot Pro v4.0</p>
+                </div>
+
+                <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-3">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">معرف تيليجرام أو البريد</label>
+                        <input type="text" id="username" value="admin" placeholder="@username أو البريد" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">مفتاح ترخيص الـ VIP</label>
+                        <input type="text" id="license-key" value="VIP-2026" placeholder="أدخل مفتاح الترخيص..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <!-- تم ربط الزر مباشرة عبر onclick لضمان عدم حدوث أي مشكلة في الـ Event Listeners -->
+                    <button onclick="verifyLicense()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-3.5 rounded-xl text-xs shadow-lg shadow-cyan-500/20 cursor-pointer transition active:scale-95">
+                        تحقق ودخول إلى لوحة الروبوت 🚀
+                    </button>
+                </div>
+            </div>
+
+            <!-- لوحة التحكم الاحترافية الكاملة (تظهر بعد التحقق) -->
+            <div id="dashboard-view" class="hidden space-y-3 pt-1">
+                
+                <!-- رأس اللوحة وحالة الاتصال وزر الإعدادات -->
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-sm">🤖</div>
+                        <div>
+                            <h2 class="text-xs font-bold text-white">روبوت التداول سكالب</h2>
+                            <span id="active-broker-label" class="text-[9px] text-cyan-400">MT5 / JustMarkets Feed</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="openSettings()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 p-1.5 rounded-xl border border-slate-700 transition cursor-pointer text-xs" title="إعدادات المنصة والبروكر">
+                            ⚙️
+                        </button>
+                        <span id="license-badge" class="bg-amber-500/20 text-amber-400 text-[9px] px-2 py-0.5 rounded-full border border-amber-500/30 font-bold">👑 VIP</span>
+                        <span class="bg-emerald-500/20 text-emerald-400 text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> متصل
+                        </span>
+                    </div>
+                </div>
+
+                <!-- شريط الأرباح والنجاح -->
+                <div class="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-cyan-950/40 border border-emerald-500/30 p-3 rounded-2xl flex items-center justify-between shadow-lg">
+                    <div>
+                        <div class="text-[10px] text-slate-400">إجمالي أرباح الجلسة</div>
+                        <div class="text-base font-bold text-emerald-400 font-mono mt-0.5" id="total-profit">+$348.50</div>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-[10px] text-slate-400">نسبة النجاح</div>
+                        <div class="text-xs font-bold text-cyan-400 font-mono">92.4% (24/26)</div>
+                    </div>
+                </div>
+
+                <!-- الفريم الزمني والمؤشر -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="glass-card p-2.5 rounded-xl flex items-center justify-between">
+                        <span class="text-[10px] text-slate-400">الفريم الزمني</span>
+                        <span class="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-lg border border-emerald-500/30">1 دقيقة ⚡</span>
+                    </div>
+                    <div class="glass-card p-2.5 rounded-xl flex items-center justify-between">
+                        <span class="text-[10px] text-slate-400">فترة المؤشر</span>
+                        <span class="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-lg border border-cyan-500/20">14 EMA</span>
+                    </div>
+                </div>
+
+                <!-- رادار الذكاء الاصطناعي -->
+                <div class="glass-card p-3 rounded-xl relative overflow-hidden border-cyan-500/30 animate-pulse-slow">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-sm">🔮</span>
+                        <h3 class="text-[11px] font-bold text-cyan-300">رادار التنبؤ الحركي (Smart AI)</h3>
+                    </div>
+                    <p class="text-[10px] text-slate-300 leading-relaxed" id="radar-status">جارٍ مراقبة مستويات الثقة، تحليل السيولة اللحظية واستقرار الشموع...</p>
+                </div>
+
+                <!-- عداد الشمعة التنازلي -->
+                <div class="bg-slate-950/60 border border-slate-800 p-2.5 rounded-xl text-center">
+                    <div class="text-[10px] text-amber-400 font-semibold flex items-center justify-center gap-1">
+                        <span>⏳</span> شمعة المراقبة تبقي: <span id="countdown" class="font-mono font-bold text-xs">00:45</span>
+                    </div>
+                </div>
+
+                <!-- شبكة الإحصاءات الثلاثية -->
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="glass-card p-2.5 rounded-xl text-center">
+                        <div class="text-[9px] text-slate-400 mb-0.5">مستوى الثقة</div>
+                        <div class="text-xs font-bold text-cyan-400 font-mono" id="confidence-val">94.8%</div>
+                    </div>
+                    <div class="glass-card p-2.5 rounded-xl text-center">
+                        <div class="text-[9px] text-slate-400 mb-0.5">الشموع المؤكدة</div>
+                        <div class="text-xs font-bold text-white font-mono" id="candles-count">5 / 5</div>
+                    </div>
+                    <div class="glass-card p-2.5 rounded-xl text-center">
+                        <div class="text-[9px] text-slate-400 mb-0.5">الاتجاه</div>
+                        <div class="text-xs font-bold text-emerald-400" id="stat-direction">شراء 🟢</div>
+                    </div>
+                </div>
+
+                <!-- سجل الصفقات الحية -->
+                <div class="glass-card p-3 rounded-xl space-y-2">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                        <span class="text-[11px] font-bold text-white flex items-center gap-1"><span>📋</span> سجل الصفقات الحية</span>
+                        <span id="trades-broker-tag" class="text-[9px] text-cyan-400">MetaTrader 5</span>
+                    </div>
+                    
+                    <div class="space-y-1.5 text-[10px]" id="trades-list">
+                        <div class="flex items-center justify-between bg-slate-950/70 p-2 rounded-lg border border-slate-800">
+                            <div class="flex items-center gap-2">
+                                <span class="text-emerald-400 font-bold">🟢 شراء</span>
+                                <span class="text-slate-300 font-mono">EURUSD</span>
+                            </div>
+                            <div class="text-left font-mono">
+                                <span class="text-emerald-400 font-bold">+$18.20</span>
+                                <div class="text-[8px] text-slate-500">منذ دقيقتين</div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between bg-slate-950/70 p-2 rounded-lg border border-slate-800">
+                            <div class="flex items-center gap-2">
+                                <span class="text-rose-400 font-bold">🔴 بيع</span>
+                                <span class="text-slate-300 font-mono">GBPUSD</span>
+                            </div>
+                            <div class="text-left font-mono">
+                                <span class="text-emerald-400 font-bold">+$24.50</span>
+                                <div class="text-[8px] text-slate-500">منذ 8 دقائق</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- زر التشغيل والتحكم الفوري -->
+                <button onclick="toggleScan()" id="scan-btn" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-500/20 text-xs transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                    <span>تشغيل الفحص الحي والربط الآلي</span>
+                    <span>⚡</span>
+                </button>
+
+                <button onclick="location.reload()" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-400 py-2.5 rounded-xl text-[11px] font-bold cursor-pointer border border-slate-800 transition">
+                    تسجيل الخروج / تبديل الحساب 🔄
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== نافذة إعدادات البروكر ==================== -->
+        <div id="settings-modal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-800 w-full rounded-2xl p-4 space-y-3 shadow-2xl">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-base">⚙️</span>
+                        <h3 class="text-xs font-bold text-white">إعدادات ربط المنصة والبروكر</h3>
+                    </div>
+                    <button onclick="closeSettings()" class="text-slate-400 hover:text-white text-sm font-bold px-1.5 cursor-pointer">✕</button>
+                </div>
+
+                <div class="space-y-2.5 text-xs">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">البروكر أو المنصة المعتمدة</label>
+                        <select id="broker-select" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+                            <option value="JustMarkets">JustMarkets (البروكر الأساسي)</option>
+                            <option value="MetaTrader 5">MetaTrader 5 (MT5)</option>
+                            <option value="MetaTrader 4">MetaTrader 4 (MT4)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">رقم حساب التداول (Login ID)</label>
+                        <input type="text" id="broker-login" placeholder="مثال: 52410982" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">كلمة مرور السيرفر</label>
+                        <input type="password" id="broker-pass" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                </div>
+
+                <button onclick="saveBrokerSettings()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-cyan-500/20 cursor-pointer transition active:scale-95">
+                    حفظ وربط الحساب بالبث الحي 🔄
+                </button>
+            </div>
+        </div>
+
+        <div class="text-center pt-3 pb-1">
+            <p class="text-[9px] text-slate-500">Smart Scalp Bot Pro v4.0 - جميع الحقوق محفوظة</p>
+        </div>
+
+    </div>
+
+    <!-- كود الجافاسكريبت المضمن مباشرة داخل الـ HTML لضمان العمل بنسبة 100% في CodePen -->
+    <script>
+        window.onload = function() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                tg.expand();
+                const user = tg.initDataUnsafe?.user;
+                if (user && user.first_name) {
+                    document.getElementById('tg-username').innerText = user.first_name;
+                    document.getElementById('tg-user-banner').classList.remove('hidden');
+                }
+            }
+            startCountdown();
+        };
+
+        function verifyLicense() {
+            document.getElementById('auth-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+        }
+
+        function openSettings() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function saveBrokerSettings() {
+            const loginId = document.getElementById('broker-login').value;
+            const selectedBroker = document.getElementById('broker-select').value;
+            document.getElementById('active-broker-label').innerText = selectedBroker + ' Direct';
+            document.getElementById('trades-broker-tag').innerText = selectedBroker;
+            alert('🟢 تم حفظ إعدادات الربط بنجاح مع ' + selectedBroker + (loginId ? ' (حساب: ' + loginId + ')' : ''));
+            closeSettings();
+        }
+
+        function startCountdown() {
+            let seconds = 59;
+            setInterval(() => {
+                seconds--;
+                if(seconds < 0) seconds = 59;
+                let formatted = seconds < 10 ? `00:0${seconds}` : `00:${seconds}`;
+                const cd = document.getElementById('countdown');
+                if(cd) cd.innerText = formatted;
+            }, 1000);
+        }
+
+        let scanning = false;
+        function toggleScan() {
+            scanning = !scanning;
+            const scanBtn = document.getElementById('scan-btn');
+            const status = document.getElementById('radar-status');
+            const direction = document.getElementById('stat-direction');
+            const confidence = document.getElementById('confidence-val');
+            const list = document.getElementById('trades-list');
+            
+            if(scanning) {
+                scanBtn.innerHTML = `<span>إيقاف المؤشر المؤقت</span> ⏹️`;
+                scanBtn.className = "w-full bg-gradient-to-r from-rose-500 to-red-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-rose-500/20 text-xs transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer";
+                status.innerText = "⚡ تم رصد فرصة سكالب مؤكدة! تم تنفيذ صفقة جديدة وإضافتها للسجل مباشرة...";
+                direction.innerText = "بيع قوي 🔴";
+                confidence.innerText = "98.2%";
+                
+                const newTrade = document.createElement('div');
+                newTrade.className = "flex items-center justify-between bg-slate-950/70 p-2 rounded-lg border border-emerald-500/40 animate-pulse";
+                newTrade.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-rose-400 font-bold">🔴 بيع</span>
+                        <span class="text-slate-300 font-mono">US30 (مؤكد)</span>
+                    </div>
+                    <div class="text-left font-mono">
+                        <span class="text-emerald-400 font-bold">+$32.00</span>
+                        <div class="text-[8px] text-slate-500">الآن</div>
+                    </div>
+                `;
+                list.prepend(newTrade);
+            } else {
+                scanBtn.innerHTML = `<span>تشغيل الفحص الحي والربط الآلي</span> ⚡`;
+                scanBtn.className = "w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-500/20 text-xs transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer";
+                status.innerText = "جارٍ مراقبة مستويات الثقة، تحليل السيولة اللحظية واستقرار الشموع...";
+                direction.innerText = "شراء 🟢";
+                confidence.innerText = "94.8%";
+            }
+        }
+    </script>
+</body>
+</html>
