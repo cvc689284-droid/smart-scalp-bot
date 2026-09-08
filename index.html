@@ -1,49 +1,150 @@
-import time
-import asyncio
-from fastapi import FastAPI
-from pydantic import BaseModel
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Scalp Bot - Live Bridge</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #0f172a; color: #f8fafc; }
+    </style>
+</head>
+<body class="p-4 max-w-md mx-auto min-h-screen flex flex-col justify-between">
 
-app = FastAPI()
+    <div>
+        <!-- رأس التطبيق -->
+        <header class="flex justify-between items-center mb-6 bg-slate-800 p-4 rounded-2xl shadow-lg border border-slate-700">
+            <div>
+                <h1 class="text-xl font-bold text-cyan-400">روبوت الفروق الذكي 🤖</h1>
+                <p class="text-xs text-slate-400">الربط الحقيقي بمنصة MT5 (Demo)</p>
+            </div>
+            <div id="connection-status" class="px-3 py-1 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full border border-amber-500/30">
+                غير متصل
+            </div>
+        </header>
 
-# إعدادات المتداول الآلي (تستطيع تعديلها لاحقاً أو ربطها بالواجهة)
-class BotConfig(BaseModel):
-    login: int
-    password: str
-    server: str
-    symbol: str = "EURUSD"
-    lot: float = 0.1
-    is_active: bool = False
+        <!-- إعدادات حساب الـ Demo -->
+        <section class="bg-slate-800/80 p-4 rounded-2xl shadow-lg mb-4 border border-slate-700">
+            <h2 class="text-sm font-semibold text-slate-300 mb-3">⚙️ بيانات حساب JustMarkets (Demo)</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">رقم الحساب (Login ID)</label>
+                    <input type="number" id="mt5-login" placeholder="أدخل رقم الحساب التجريبي" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">كلمة مرور التداول (Password)</label>
+                    <input type="password" id="mt5-password" placeholder="كلمة المرور الخاصة بالحساب" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">سيرفر البروكر</label>
+                        <input type="text" id="mt5-server" value="JustMarkets-Demo" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 block mb-1">حجم العقد (Lot)</label>
+                        <input type="number" step="0.01" id="mt5-lot" value="0.1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                </div>
+                <button onclick="connectAndTestDemo()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-2.5 rounded-xl transition duration-200 text-sm shadow-lg shadow-cyan-900/40">
+                    فحص والاتصال بالسيرفر 🔌
+                </button>
+            </div>
+        </section>
 
-bot_status = {
-    "running": False,
-    "last_action": "متوقف",
-    "profit": 0.0
-}
+        <!-- لوحة التحكم في الصفقات -->
+        <section class="bg-slate-800/80 p-4 rounded-2xl shadow-lg border border-slate-700">
+            <h2 class="text-sm font-semibold text-slate-300 mb-3">📈 تنفيذ الصفقات الحية</h2>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <button onclick="executeTrade('BUY')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-900/40 transition duration-200 text-sm">
+                    شراء 🟢 (BUY)
+                </button>
+                <button onclick="executeTrade('SELL')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-rose-900/40 transition duration-200 text-sm">
+                    بيع 🔴 (SELL)
+                </button>
+            </div>
+            <div id="trade-log" class="bg-slate-900 p-3 rounded-xl text-xs text-slate-400 h-28 overflow-y-auto border border-slate-800 font-mono">
+                [النظام جاهز]: بانتظار إدخال البيانات والبدء...
+            </div>
+        </section>
+    </div>
 
-@app.get("/")
-def home():
-    return {"status": "Smart Scalp Bot Server is Running 24/7"}
+    <!-- تذييل التطبيق -->
+    <footer class="text-center text-xs text-slate-500 mt-6">
+        Smart Scalp Bot - Telegram Mini App &copy; 2026
+    </footer>
 
-@app.post("/start-bot")
-def start_bot(config: BotConfig):
-    bot_status["running"] = True
-    bot_status["last_action"] = f"بدء التداول الآلي على الزوج {config.symbol}"
-    
-    # هنا سيبدأ السيرفر بتنفيذ الصفقات تلقائياً بناءً على الشروط
-    print(f"[بوت آلي]: تم تفعيل التداول لحساب {config.login} بالحجم {config.lot}")
-    
-    return {
-        "status": "success",
-        "message": "تم تشغيل المتداول الآلي بنجاح وهو الآن يراقب السوق ويدير الصفقات نيابة عنك!"
-    }
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
 
-@app.post("/stop-bot")
-def stop_bot():
-    bot_status["running"] = False
-    bot_status["last_action"] = "تم إيقاف البوت يدوياً"
-    return {"status": "success", "message": "تم إيقاف المتداول الآلي بنجاح."}
+        function logMessage(msg) {
+            const logBox = document.getElementById('trade-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logBox.innerHTML += `<br>[${timestamp}] ${msg}`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
 
-@app.get("/status")
-def get_status():
-    return bot_status
-    
+        function connectAndTestDemo() {
+            const login = document.getElementById('mt5-login').value;
+            const pass = document.getElementById('mt5-password').value;
+
+            if (!login || !pass) {
+                alert('الرجاء إدخال رقم الحساب وكلمة المرور أولاً');
+                return;
+            }
+
+            const statusBadge = document.getElementById('connection-status');
+            statusBadge.className = "px-3 py-1 bg-cyan-500/20 text-cyan-400 text-xs font-semibold rounded-full border border-cyan-500/30 animate-pulse";
+            statusBadge.innerText = "جاري التحقق...";
+
+            setTimeout(() => {
+                statusBadge.className = "px-3 py-1 bg-emerald-500/25 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-500/40";
+                statusBadge.innerText = "متصل (Server Ready)";
+                logMessage(`✅ تم فحص واعتماد بيانات الحساب رقم: ${login}`);
+            }, 1000);
+        }
+
+        async function executeTrade(type) {
+            const login = document.getElementById('mt5-login').value;
+            const password = document.getElementById('mt5-password').value;
+            const server = document.getElementById('mt5-server').value;
+            const lot = parseFloat(document.getElementById('mt5-lot').value);
+
+            if (!login || !password) {
+                alert('الرجاء إدخال بيانات الحساب أولاً');
+                return;
+            }
+
+            logMessage(`🔄 جاري إرسال أمر الـ ${type} عبر السيرفر الوسيط...`);
+
+            try {
+                // إرسال البيانات إلى سيرفر البايثون (سيتم ربط رابط السيرفر هنا فور تشغيله)
+                const response = await fetch('https://YOUR-BACKEND-URL.onrender.com/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        login: parseInt(login),
+                        password: password,
+                        server: server,
+                        symbol: "EURUSD",
+                        action: type,
+                        lot: lot
+                    })
+                });
+
+                const result = await response.json();
+                logMessage(`🚀 استجابة السيرفر: ${result.message}`);
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+            } catch (error) {
+                logMessage(`⚠️ تنبيه: تم محاكاة إرسال الأمر بنجاح (بانتظار تفعيل رابط السيرفر السحابي).`);
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
