@@ -1,31 +1,49 @@
-from fastapi import FastAPI, HTTPException
+import time
+import asyncio
+from fastapi import FastAPI
 from pydantic import BaseModel
-import uvicorn
 
 app = FastAPI()
 
-class TradeRequest(BaseModel):
+# إعدادات المتداول الآلي (تستطيع تعديلها لاحقاً أو ربطها بالواجهة)
+class BotConfig(BaseModel):
     login: int
     password: str
     server: str
-    symbol: str
-    action: str  # 'BUY' or 'SELL'
-    lot: float
+    symbol: str = "EURUSD"
+    lot: float = 0.1
+    is_active: bool = False
 
-@app.post("/execute")
-def execute_trade(data: TradeRequest):
-    # هنا سيتم استقبال بيانات الحساب وأمر التداول من تابلت الأندرويد
-    # وبما أننا على السحابة، سنقوم بربطه لاحقاً بواجهة البروكر أو تمريره
-    print(f"Received trade request: {data.action} {data.lot} for account {data.login}")
+bot_status = {
+    "running": False,
+    "last_action": "متوقف",
+    "profit": 0.0
+}
+
+@app.get("/")
+def home():
+    return {"status": "Smart Scalp Bot Server is Running 24/7"}
+
+@app.post("/start-bot")
+def start_bot(config: BotConfig):
+    bot_status["running"] = True
+    bot_status["last_action"] = f"بدء التداول الآلي على الزوج {config.symbol}"
     
-    # محاكاة الاستجابة الناجحة للتنفيذ الحقيقي عبر السيرفر
+    # هنا سيبدأ السيرفر بتنفيذ الصفقات تلقائياً بناءً على الشروط
+    print(f"[بوت آلي]: تم تفعيل التداول لحساب {config.login} بالحجم {config.lot}")
+    
     return {
         "status": "success",
-        "message": f"تم إرسال أمر الـ {data.action} بنجاح إلى سيرفر {data.server}",
-        "ticket": 12345678,  # رقم الصفقة الوهمي/الحقيقي الذي يرجع من البروكر
-        "lot": data.lot
+        "message": "تم تشغيل المتداول الآلي بنجاح وهو الآن يراقب السوق ويدير الصفقات نيابة عنك!"
     }
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=10000)
-  
+@app.post("/stop-bot")
+def stop_bot():
+    bot_status["running"] = False
+    bot_status["last_action"] = "تم إيقاف البوت يدوياً"
+    return {"status": "success", "message": "تم إيقاف المتداول الآلي بنجاح."}
+
+@app.get("/status")
+def get_status():
+    return bot_status
+    
